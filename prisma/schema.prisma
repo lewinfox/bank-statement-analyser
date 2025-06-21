@@ -34,8 +34,8 @@ model Transaction {
   reference                String?
   amount                   Decimal
   date                     DateTime
-  foreign_currency_amount  Decimal?
-  conversion_charge        Decimal?
+  foreign_currency_amount  String?
+  conversion_charge        String?
   created_at               DateTime  @default(now())
   updated_at               DateTime  @updatedAt
   

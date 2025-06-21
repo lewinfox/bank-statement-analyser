@@ -19,8 +19,8 @@ CREATE TABLE "transactions" (
     "reference" TEXT,
     "amount" DECIMAL NOT NULL,
     "date" DATETIME NOT NULL,
-    "foreign_currency_amount" DECIMAL,
-    "conversion_charge" DECIMAL,
+    "foreign_currency_amount" TEXT,
+    "conversion_charge" TEXT,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL,
     CONSTRAINT "transactions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE ON UPDATE CASCADE

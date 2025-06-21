@@ -94,7 +94,7 @@ describe('CsvService', () => {
       });
     });
 
-    test('should parse row with foreign currency fields', () => {
+    test('should parse row with foreign currency fields as text', () => {
       const row = {
         Type: 'International Transfer',
         Details: 'Transfer to USD account',
@@ -103,14 +103,14 @@ describe('CsvService', () => {
         Reference: 'REF123',
         Amount: '-1000.00',
         Date: '15/03/2025',
-        ForeignCurrencyAmount: '750.50',
-        ConversionCharge: '15.25'
+        ForeignCurrencyAmount: 'AUD 358.75 converted at 0.91',
+        ConversionCharge: 'This includes a currency conversion charge of $5.12'
       };
 
       const transaction = csvService.parseTransactionRow(row, 1);
 
-      expect(transaction.foreign_currency_amount).toBe(750.50);
-      expect(transaction.conversion_charge).toBe(15.25);
+      expect(transaction.foreign_currency_amount).toBe('AUD 358.75 converted at 0.91');
+      expect(transaction.conversion_charge).toBe('This includes a currency conversion charge of $5.12');
     });
 
     test('should handle rows with empty details', () => {

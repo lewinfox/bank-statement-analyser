@@ -106,22 +106,16 @@ class CsvService {
       throw new Error(`Invalid amount '${row.Amount}' in row ${rowNumber}`);
     }
 
-    // Parse optional foreign currency fields
+    // Handle optional foreign currency fields as text
     let foreignCurrencyAmount = null;
     let conversionCharge = null;
 
     if (row.ForeignCurrencyAmount && row.ForeignCurrencyAmount.trim() !== '') {
-      foreignCurrencyAmount = parseFloat(row.ForeignCurrencyAmount);
-      if (isNaN(foreignCurrencyAmount)) {
-        throw new Error(`Invalid foreign currency amount '${row.ForeignCurrencyAmount}' in row ${rowNumber}`);
-      }
+      foreignCurrencyAmount = row.ForeignCurrencyAmount.trim();
     }
 
     if (row.ConversionCharge && row.ConversionCharge.trim() !== '') {
-      conversionCharge = parseFloat(row.ConversionCharge);
-      if (isNaN(conversionCharge)) {
-        throw new Error(`Invalid conversion charge '${row.ConversionCharge}' in row ${rowNumber}`);
-      }
+      conversionCharge = row.ConversionCharge.trim();
     }
 
     return {

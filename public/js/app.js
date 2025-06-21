@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
 async function initializeApp() {
     setupAuthEventListeners();
     setupDashboardEventListeners();
+    setupUploadEventListeners();
     
     // Check if user is already logged in
     await checkAuthStatus();
@@ -247,6 +248,180 @@ function clearAuthForms() {
     document.getElementById('login-form').reset();
     document.getElementById('register-form').reset();
     clearAuthMessage();
+}
+
+/**
+ * Set up CSV upload event listeners
+ */
+function setupUploadEventListeners() {
+    const csvFileInput = document.getElementById('csv-file');
+    const fileNameSpan = document.getElementById('file-name');
+    const uploadForm = document.getElementById('csv-upload-form');
+    const uploadAnotherBtn = document.getElementById('upload-another');
+    const viewTransactionsBtn = document.getElementById('view-transactions');
+
+    // Handle file selection
+    csvFileInput.addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
+            fileNameSpan.textContent = file.name;
+            fileNameSpan.classList.add('file-selected');
+        } else {
+            fileNameSpan.textContent = 'No file selected';
+            fileNameSpan.classList.remove('file-selected');
+        }
+    });
+
+    // Handle form submission
+    uploadForm.addEventListener('submit', handleCsvUpload);
+
+    // Handle upload another file
+    uploadAnotherBtn.addEventListener('click', function() {
+        document.getElementById('upload-results').style.display = 'none';
+        document.getElementById('upload-message').style.display = 'none';
+        uploadForm.reset();
+        fileNameSpan.textContent = 'No file selected';
+        fileNameSpan.classList.remove('file-selected');
+    });
+
+    // Handle view transactions
+    viewTransactionsBtn.addEventListener('click', function() {
+        document.getElementById('transactions-btn').click();
+    });
+}
+
+/**
+ * Handle CSV file upload
+ */
+async function handleCsvUpload(event) {
+    event.preventDefault();
+    
+    const fileInput = document.getElementById('csv-file');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        showUploadMessage('Please select a CSV file', 'error');
+        return;
+    }
+
+    // Validate file type
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+        showUploadMessage('Please select a valid CSV file', 'error');
+        return;
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+        showUploadMessage('File size must be less than 5MB', 'error');
+        return;
+    }
+
+    // Show loading state
+    setUploadLoading(true);
+    hideUploadResults();
+    clearUploadMessage();
+
+    try {
+        const formData = new FormData();
+        formData.append('csvFile', file);
+
+        const response = await fetch('/api/transactions/upload-csv', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showUploadMessage(`Successfully processed ${data.filename}`, 'success');
+            displayUploadResults(data.results);
+        } else {
+            showUploadMessage(data.error || 'Upload failed', 'error');
+        }
+    } catch (error) {
+        showUploadMessage('Network error. Please try again.', 'error');
+        console.error('Upload error:', error);
+    } finally {
+        setUploadLoading(false);
+    }
+}
+
+/**
+ * Display upload results
+ */
+function displayUploadResults(results) {
+    document.getElementById('total-rows').textContent = results.totalRows;
+    document.getElementById('successful-added').textContent = results.successfullyAdded;
+    document.getElementById('duplicates-ignored').textContent = results.duplicatesIgnored;
+    document.getElementById('errors-count').textContent = results.errorsCount;
+
+    // Show error details if there are errors
+    if (results.errorsCount > 0 && results.errors) {
+        const errorList = document.getElementById('error-list');
+        errorList.innerHTML = '';
+        
+        results.errors.forEach(error => {
+            const li = document.createElement('li');
+            li.textContent = `Row ${error.row || 'Unknown'}: ${error.error}`;
+            errorList.appendChild(li);
+        });
+        
+        document.getElementById('error-details').style.display = 'block';
+    } else {
+        document.getElementById('error-details').style.display = 'none';
+    }
+
+    document.getElementById('upload-results').style.display = 'block';
+}
+
+/**
+ * Set upload loading state
+ */
+function setUploadLoading(loading) {
+    const uploadBtn = document.getElementById('upload-btn');
+    const btnText = document.querySelector('.btn-text');
+    const btnSpinner = document.getElementById('upload-spinner');
+    const fileInput = document.getElementById('csv-file');
+
+    uploadBtn.disabled = loading;
+    fileInput.disabled = loading;
+    
+    if (loading) {
+        btnText.style.display = 'none';
+        btnSpinner.style.display = 'inline';
+        uploadBtn.classList.add('loading');
+    } else {
+        btnText.style.display = 'inline';
+        btnSpinner.style.display = 'none';
+        uploadBtn.classList.remove('loading');
+    }
+}
+
+/**
+ * Show upload message
+ */
+function showUploadMessage(message, type) {
+    const messageDiv = document.getElementById('upload-message');
+    messageDiv.textContent = message;
+    messageDiv.className = `upload-message ${type}`;
+    messageDiv.style.display = 'block';
+}
+
+/**
+ * Clear upload message
+ */
+function clearUploadMessage() {
+    const messageDiv = document.getElementById('upload-message');
+    messageDiv.style.display = 'none';
+    messageDiv.textContent = '';
+    messageDiv.className = 'upload-message';
+}
+
+/**
+ * Hide upload results
+ */
+function hideUploadResults() {
+    document.getElementById('upload-results').style.display = 'none';
 }
 
 /**
