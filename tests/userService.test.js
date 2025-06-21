@@ -8,27 +8,19 @@ const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
-/**
- * Helper function to clean database between tests
- * Removes all users to ensure test isolation
- */
-const cleanDatabase = async () => {
-  await prisma.user.deleteMany();
-};
-
 describe('UserService', () => {
-  // Clean database before each test to ensure isolation
-  beforeEach(async () => {
-    await cleanDatabase();
-  });
 
   describe('createUser', () => {
     /**
      * Test that a user can be created successfully with valid inputs
      */
     test('should create a user with hashed password', async () => {
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(7);
+      const username = `testuser_${timestamp}_${randomId}`;
+
       const userData = {
-        username: 'testuser',
+        username: username,
         password: 'password123'
       };
 
@@ -36,13 +28,13 @@ describe('UserService', () => {
 
       // Verify returned user object
       expect(user).toHaveProperty('id');
-      expect(user).toHaveProperty('username', 'testuser');
+      expect(user).toHaveProperty('username', username);
       expect(user).not.toHaveProperty('password');
       expect(user).not.toHaveProperty('password_hash');
 
       // Verify user exists in database with hashed password
       const dbUser = await prisma.user.findUnique({
-        where: { username: 'testuser' }
+        where: { username: username }
       });
       expect(dbUser).toBeTruthy();
       expect(dbUser.password_hash).toBeTruthy();
@@ -53,13 +45,17 @@ describe('UserService', () => {
      * Test that attempting to create a user with a duplicate username throws an error
      */
     test('should throw error for duplicate username', async () => {
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(7);
+      const username = `duplicate_${timestamp}_${randomId}`;
+
       // Create first user
-      const user1 = await userService.createUser('duplicate', 'password123');
-      expect(user1).toHaveProperty('username', 'duplicate');
+      const user1 = await userService.createUser(username, 'password123');
+      expect(user1).toHaveProperty('username', username);
 
       // Attempt to create second user with same username
       await expect(
-        userService.createUser('duplicate', 'differentpass')
+        userService.createUser(username, 'differentpass')
       ).rejects.toThrow('Username already exists');
     });
 
@@ -67,11 +63,16 @@ describe('UserService', () => {
      * Test that passwords are hashed with different salts for security
      */
     test('should hash passwords with different salts', async () => {
-      const user1 = await userService.createUser('user1', 'samepassword');
-      const user2 = await userService.createUser('user2', 'samepassword');
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(7);
+      const username1 = `user1_${timestamp}_${randomId}`;
+      const username2 = `user2_${timestamp}_${randomId}`;
 
-      const dbUser1 = await prisma.user.findUnique({ where: { username: 'user1' } });
-      const dbUser2 = await prisma.user.findUnique({ where: { username: 'user2' } });
+      const user1 = await userService.createUser(username1, 'samepassword');
+      const user2 = await userService.createUser(username2, 'samepassword');
+
+      const dbUser1 = await prisma.user.findUnique({ where: { username: username1 } });
+      const dbUser2 = await prisma.user.findUnique({ where: { username: username2 } });
 
       // Same password should produce different hashes due to salt
       expect(dbUser1.password_hash).not.toBe(dbUser2.password_hash);
@@ -79,20 +80,25 @@ describe('UserService', () => {
   });
 
   describe('authenticateUser', () => {
+    let testUsername;
+
     beforeEach(async () => {
-      // Create a test user for authentication tests
-      await userService.createUser('authtest', 'correctpassword');
+      // Create a test user for authentication tests with unique username
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(7);
+      testUsername = `authtest_${timestamp}_${randomId}`;
+      await userService.createUser(testUsername, 'correctpassword');
     });
 
     /**
      * Test successful authentication with correct credentials
      */
     test('should authenticate user with correct credentials', async () => {
-      const user = await userService.authenticateUser('authtest', 'correctpassword');
+      const user = await userService.authenticateUser(testUsername, 'correctpassword');
 
       expect(user).toBeTruthy();
       expect(user).toHaveProperty('id');
-      expect(user).toHaveProperty('username', 'authtest');
+      expect(user).toHaveProperty('username', testUsername);
       expect(user).not.toHaveProperty('password_hash');
     });
 
@@ -100,7 +106,7 @@ describe('UserService', () => {
      * Test that authentication fails with incorrect password
      */
     test('should return null for incorrect password', async () => {
-      const user = await userService.authenticateUser('authtest', 'wrongpassword');
+      const user = await userService.authenticateUser(testUsername, 'wrongpassword');
       expect(user).toBeNull();
     });
 
@@ -108,7 +114,10 @@ describe('UserService', () => {
      * Test that authentication fails with non-existent username
      */
     test('should return null for non-existent username', async () => {
-      const user = await userService.authenticateUser('nonexistent', 'password');
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(7);
+      const nonExistentUsername = `nonexistent_${timestamp}_${randomId}`;
+      const user = await userService.authenticateUser(nonExistentUsername, 'password');
       expect(user).toBeNull();
     });
 
@@ -116,17 +125,21 @@ describe('UserService', () => {
      * Test that authentication fails with empty password
      */
     test('should return null for empty password', async () => {
-      const user = await userService.authenticateUser('authtest', '');
+      const user = await userService.authenticateUser(testUsername, '');
       expect(user).toBeNull();
     });
   });
 
   describe('findUserById', () => {
     let testUserId;
+    let testUsername;
 
     beforeEach(async () => {
-      // Create a test user and store its ID
-      const user = await userService.createUser('findtest', 'password123');
+      // Create a test user and store its ID with unique username
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(7);
+      testUsername = `findtest_${timestamp}_${randomId}`;
+      const user = await userService.createUser(testUsername, 'password123');
       testUserId = user.id;
     });
 
@@ -138,7 +151,7 @@ describe('UserService', () => {
 
       expect(user).toBeTruthy();
       expect(user).toHaveProperty('id', testUserId);
-      expect(user).toHaveProperty('username', 'findtest');
+      expect(user).toHaveProperty('username', testUsername);
       expect(user).not.toHaveProperty('password_hash');
     });
 
@@ -166,7 +179,6 @@ describe('UserService', () => {
 
   // Clean up after all tests in this suite
   afterAll(async () => {
-    await cleanDatabase();
     await prisma.$disconnect();
   });
 });
