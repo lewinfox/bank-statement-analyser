@@ -13,7 +13,7 @@ CREATE TABLE "transactions" (
     "transaction_hash" TEXT NOT NULL,
     "user_id" INTEGER NOT NULL,
     "type" TEXT NOT NULL,
-    "details" TEXT NOT NULL,
+    "details" TEXT,
     "particulars" TEXT,
     "code" TEXT,
     "reference" TEXT,

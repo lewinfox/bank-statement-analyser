@@ -28,7 +28,7 @@ model Transaction {
   transaction_hash         String
   user_id                  Int
   type                     String
-  details                  String
+  details                  String?
   particulars              String?
   code                     String?
   reference                String?
