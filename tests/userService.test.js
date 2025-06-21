@@ -5,6 +5,7 @@
 
 const userService = require('../server/services/userService');
 const { PrismaClient } = require('@prisma/client');
+const { generateUniqueUsername } = require('./test-helpers');
 
 const prisma = new PrismaClient();
 
@@ -15,9 +16,7 @@ describe('UserService', () => {
      * Test that a user can be created successfully with valid inputs
      */
     test('should create a user with hashed password', async () => {
-      const timestamp = Date.now();
-      const randomId = Math.random().toString(36).substring(7);
-      const username = `testuser_${timestamp}_${randomId}`;
+      const username = generateUniqueUsername('testuser');
 
       const userData = {
         username: username,
@@ -45,9 +44,7 @@ describe('UserService', () => {
      * Test that attempting to create a user with a duplicate username throws an error
      */
     test('should throw error for duplicate username', async () => {
-      const timestamp = Date.now();
-      const randomId = Math.random().toString(36).substring(7);
-      const username = `duplicate_${timestamp}_${randomId}`;
+      const username = generateUniqueUsername('duplicate');
 
       // Create first user
       const user1 = await userService.createUser(username, 'password123');
@@ -63,10 +60,8 @@ describe('UserService', () => {
      * Test that passwords are hashed with different salts for security
      */
     test('should hash passwords with different salts', async () => {
-      const timestamp = Date.now();
-      const randomId = Math.random().toString(36).substring(7);
-      const username1 = `user1_${timestamp}_${randomId}`;
-      const username2 = `user2_${timestamp}_${randomId}`;
+      const username1 = generateUniqueUsername('user1');
+      const username2 = generateUniqueUsername('user2');
 
       const user1 = await userService.createUser(username1, 'samepassword');
       const user2 = await userService.createUser(username2, 'samepassword');
@@ -84,9 +79,7 @@ describe('UserService', () => {
 
     beforeEach(async () => {
       // Create a test user for authentication tests with unique username
-      const timestamp = Date.now();
-      const randomId = Math.random().toString(36).substring(7);
-      testUsername = `authtest_${timestamp}_${randomId}`;
+      testUsername = generateUniqueUsername('authtest');
       await userService.createUser(testUsername, 'correctpassword');
     });
 
@@ -114,9 +107,7 @@ describe('UserService', () => {
      * Test that authentication fails with non-existent username
      */
     test('should return null for non-existent username', async () => {
-      const timestamp = Date.now();
-      const randomId = Math.random().toString(36).substring(7);
-      const nonExistentUsername = `nonexistent_${timestamp}_${randomId}`;
+      const nonExistentUsername = generateUniqueUsername('nonexistent');
       const user = await userService.authenticateUser(nonExistentUsername, 'password');
       expect(user).toBeNull();
     });
@@ -136,9 +127,7 @@ describe('UserService', () => {
 
     beforeEach(async () => {
       // Create a test user and store its ID with unique username
-      const timestamp = Date.now();
-      const randomId = Math.random().toString(36).substring(7);
-      testUsername = `findtest_${timestamp}_${randomId}`;
+      testUsername = generateUniqueUsername('findtest');
       const user = await userService.createUser(testUsername, 'password123');
       testUserId = user.id;
     });

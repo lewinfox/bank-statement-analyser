@@ -6,6 +6,7 @@
 const transactionService = require('../server/services/transactionService');
 const userService = require('../server/services/userService');
 const { PrismaClient } = require('@prisma/client');
+const { generateUniqueUsername } = require('./test-helpers');
 
 const prisma = new PrismaClient();
 
@@ -14,10 +15,8 @@ describe('TransactionService', () => {
 
   // Create test users before each test with unique usernames
   beforeEach(async () => {
-    const timestamp = Date.now();
-    const randomId = Math.random().toString(36).substring(7);
-    testUser1 = await userService.createUser(`txuser1_${timestamp}_${randomId}`, 'password123');
-    testUser2 = await userService.createUser(`txuser2_${timestamp}_${randomId}`, 'password123');
+    testUser1 = await userService.createUser(generateUniqueUsername('txuser1'), 'password123');
+    testUser2 = await userService.createUser(generateUniqueUsername('txuser2'), 'password123');
   });
 
   /**
