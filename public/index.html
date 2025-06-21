@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Statements Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Personal Finance Dashboard</h1>
+            <nav>
+                <button id="dashboard-btn" class="nav-btn active">Dashboard</button>
+                <button id="transactions-btn" class="nav-btn">Transactions</button>
+                <button id="categories-btn" class="nav-btn">Categories</button>
+                <button id="upload-btn" class="nav-btn">Upload</button>
+            </nav>
+        </header>
+
+        <main id="main-content">
+            <div id="dashboard-view" class="view active">
+                <h2>Dashboard</h2>
+                <p>Welcome to your personal finance dashboard.</p>
+                <div class="status-check">
+                    <button onclick="checkServerStatus()">Check Server Status</button>
+                    <div id="status-result"></div>
+                </div>
+            </div>
+
+            <div id="transactions-view" class="view">
+                <h2>Transactions</h2>
+                <p>Transaction management coming soon...</p>
+            </div>
+
+            <div id="categories-view" class="view">
+                <h2>Categories</h2>
+                <p>Category management coming soon...</p>
+            </div>
+
+            <div id="upload-view" class="view">
+                <h2>Upload CSV</h2>
+                <p>CSV upload functionality coming soon...</p>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  username      String   @unique
+  password_hash String
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  
+  transactions  Transaction[]
+  categories    Category[]
+  
+  @@map("users")
+}
+
+model Transaction {
+  id                       Int       @id @default(autoincrement())
+  transaction_hash         String
+  user_id                  Int
+  type                     String
+  details                  String
+  particulars              String?
+  code                     String?
+  reference                String?
+  amount                   Decimal
+  date                     DateTime
+  foreign_currency_amount  Decimal?
+  conversion_charge        Decimal?
+  created_at               DateTime  @default(now())
+  updated_at               DateTime  @updatedAt
+  
+  user                     User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  transaction_categories   TransactionCategory[]
+  
+  @@unique([user_id, transaction_hash])
+  @@map("transactions")
+}
+
+model Category {
+  id                     Int       @id @default(autoincrement())
+  user_id                Int
+  name                   String
+  color                  String    @default("#6366f1")
+  created_at             DateTime  @default(now())
+  updated_at             DateTime  @updatedAt
+  
+  user                   User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  transaction_categories TransactionCategory[]
+  
+  @@unique([user_id, name])
+  @@map("categories")
+}
+
+model TransactionCategory {
+  id             Int         @id @default(autoincrement())
+  transaction_id Int
+  category_id    Int
+  created_at     DateTime    @default(now())
+  
+  transaction    Transaction @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
+  category       Category    @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  
+  @@unique([transaction_id, category_id])
+  @@map("transaction_categories")
+}
