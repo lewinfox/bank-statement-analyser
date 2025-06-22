@@ -15,7 +15,7 @@ const prisma = new PrismaClient();
 
 describe('CsvService', () => {
   let testUser;
-  const testCsvPath = path.join(__dirname, '..', 'demo-statement.csv');
+  const testCsvPath = path.join(__dirname, 'demo-statement.csv');
 
   beforeEach(async () => {
     // Create a test user with unique username
