@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bank Statements Dashboard</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
 </head>
 <body>
     <div class="container">
@@ -82,7 +84,76 @@
 
             <div id="transactions-view" class="view">
                 <h2>Transactions</h2>
-                <p>Transaction management coming soon...</p>
+                <div class="date-range-indicator" id="date-range-indicator" style="display: none;">
+                    <span class="indicator-text">Showing transactions from <strong id="current-start-date"></strong> to <strong id="current-end-date"></strong></span>
+                    <button class="btn secondary small" id="show-all-transactions">Show All Transactions</button>
+                </div>
+                
+                <!-- Filter Controls -->
+                <div class="transactions-filters">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label for="search-filter">Search:</label>
+                            <input type="text" id="search-filter" placeholder="Search transactions...">
+                        </div>
+                        <div class="filter-group">
+                            <label for="type-filter">Type:</label>
+                            <select id="type-filter">
+                                <option value="">All Types</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="amount-min">Min Amount:</label>
+                            <input type="number" id="amount-min" step="0.01" placeholder="0.00">
+                        </div>
+                        <div class="filter-group">
+                            <label for="amount-max">Max Amount:</label>
+                            <input type="number" id="amount-max" step="0.01" placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label for="date-start">From Date:</label>
+                            <input type="date" id="date-start">
+                        </div>
+                        <div class="filter-group">
+                            <label for="date-end">To Date:</label>
+                            <input type="date" id="date-end">
+                        </div>
+                        <div class="filter-group">
+                            <button id="apply-filters" class="btn primary">Apply Filters</button>
+                            <button id="clear-filters" class="btn secondary">Clear</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transaction Summary -->
+                <div class="transaction-summary">
+                    <div class="summary-item">
+                        <span class="summary-label">Total Transactions:</span>
+                        <span class="summary-value" id="total-transactions">0</span>
+                    </div>
+                </div>
+
+                <!-- Transactions Table -->
+                <div class="transactions-table-container">
+                    <table id="transactions-table" class="display responsive nowrap" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Details</th>
+                                <th>Particulars</th>
+                                <th>Code</th>
+                                <th>Amount</th>
+                                <th>Reference</th>
+                                <th>Category</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <div id="categories-view" class="view">
@@ -158,6 +229,9 @@
         </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

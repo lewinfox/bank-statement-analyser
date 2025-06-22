@@ -10,6 +10,7 @@ async function initializeApp() {
     setupAuthEventListeners();
     setupDashboardEventListeners();
     setupUploadEventListeners();
+    setupTransactionsEventListeners();
     
     // Check if user is already logged in
     await checkAuthStatus();
@@ -68,6 +69,11 @@ function setupDashboardEventListeners() {
             const targetElement = document.getElementById(targetView);
             if (targetElement) {
                 targetElement.classList.add('active');
+                
+                // Load transactions when transactions view is activated
+                if (targetView === 'transactions-view') {
+                    loadTransactions();
+                }
             }
         });
     });
@@ -446,4 +452,333 @@ async function checkServerStatus() {
             </div>
         `;
     }
+}
+
+// Global variable to store DataTable instance
+let transactionsTable = null;
+
+/**
+ * Set up transactions view event listeners
+ */
+function setupTransactionsEventListeners() {
+    // Filter controls
+    document.getElementById('apply-filters').addEventListener('click', applyTransactionFilters);
+    document.getElementById('clear-filters').addEventListener('click', clearTransactionFilters);
+    
+    // Show all transactions button
+    document.getElementById('show-all-transactions').addEventListener('click', showAllTransactions);
+    
+    // Real-time search
+    document.getElementById('search-filter').addEventListener('input', debounce(applyTransactionFilters, 500));
+}
+
+/**
+ * Load and display transactions
+ */
+async function loadTransactions(filters = {}) {
+    try {
+        let isDefaultDateRange = false;
+        
+        // If no filters are provided, default to last 12 months
+        if (Object.keys(filters).length === 0) {
+            const defaultDateRange = getDefaultDateRange();
+            filters = {
+                startDate: defaultDateRange.startDate,
+                endDate: defaultDateRange.endDate
+            };
+            isDefaultDateRange = true;
+        }
+        
+        const queryParams = new URLSearchParams({
+            page: 1,
+            limit: 5000, // Increase limit for better coverage
+            ...filters
+        });
+
+        const response = await fetch(`/api/transactions?${queryParams}`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch transactions');
+        }
+
+        const data = await response.json();
+        
+        // Show date range indicator if using default range
+        updateDateRangeIndicator(isDefaultDateRange, filters.startDate, filters.endDate);
+        
+        // Load transaction types for filter dropdown
+        populateTypeFilter(data.transactions);
+        
+        // Update summary
+        updateTransactionSummary(data.transactions);
+        
+        // Initialize or update DataTable
+        initializeTransactionsTable(data.transactions);
+        
+    } catch (error) {
+        console.error('Error loading transactions:', error);
+        // Show error message to user
+        const tableContainer = document.querySelector('.transactions-table-container');
+        tableContainer.innerHTML = `
+            <div class="error-message">
+                <p>Error loading transactions: ${error.message}</p>
+                <button onclick="loadTransactions()" class="btn primary">Retry</button>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Initialize DataTables for transactions
+ */
+function initializeTransactionsTable(transactions) {
+    // Destroy existing table if it exists
+    if (transactionsTable) {
+        transactionsTable.destroy();
+    }
+
+    // Prepare data for DataTable
+    const tableData = transactions.map(transaction => {
+        const categories = transaction.transaction_categories
+            .map(tc => tc.category.name)[0] || 'Uncategorized';
+            
+        return [
+            formatDate(transaction.date),
+            transaction.type || '',
+            transaction.details || '',
+            transaction.particulars || '',
+            transaction.code || '',
+            formatCurrency(transaction.amount),
+            transaction.reference || '',
+            categories
+        ];
+    });
+
+    // Initialize DataTable
+    transactionsTable = $('#transactions-table').DataTable({
+        data: tableData,
+        responsive: true,
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+        order: [[0, 'desc']], // Sort by date descending
+        columnDefs: [
+            {
+                targets: 5, // Amount column
+                className: 'dt-right',
+                type: 'currency'
+            },
+            {
+                targets: 0, // Date column
+                type: 'date'
+            }
+        ],
+        language: {
+            search: "Search transactions:",
+            lengthMenu: "Show _MENU_ transactions per page",
+            info: "Showing _START_ to _END_ of _TOTAL_ transactions",
+            emptyTable: "No transactions found"
+        }
+    });
+}
+
+/**
+ * Populate the transaction type filter dropdown
+ */
+function populateTypeFilter(transactions) {
+    const typeFilter = document.getElementById('type-filter');
+    const types = [...new Set(transactions.map(t => t.type).filter(Boolean))];
+    
+    // Clear existing options except "All Types"
+    typeFilter.innerHTML = '<option value="">All Types</option>';
+    
+    // Add unique types
+    types.sort().forEach(type => {
+        const option = document.createElement('option');
+        option.value = type;
+        option.textContent = type;
+        typeFilter.appendChild(option);
+    });
+}
+
+/**
+ * Update transaction summary
+ */
+function updateTransactionSummary(transactions) {
+    const totalCount = transactions.length;
+    
+    document.getElementById('total-transactions').textContent = totalCount.toLocaleString();
+}
+
+/**
+ * Apply transaction filters
+ */
+function applyTransactionFilters() {
+    const filters = {
+        search: document.getElementById('search-filter').value,
+        type: document.getElementById('type-filter').value,
+        minAmount: document.getElementById('amount-min').value,
+        maxAmount: document.getElementById('amount-max').value,
+        startDate: document.getElementById('date-start').value,
+        endDate: document.getElementById('date-end').value
+    };
+    
+    // Remove empty values
+    Object.keys(filters).forEach(key => {
+        if (!filters[key]) delete filters[key];
+    });
+    
+    loadTransactions(filters);
+}
+
+/**
+ * Clear all transaction filters
+ */
+function clearTransactionFilters() {
+    document.getElementById('search-filter').value = '';
+    document.getElementById('type-filter').value = '';
+    document.getElementById('amount-min').value = '';
+    document.getElementById('amount-max').value = '';
+    document.getElementById('date-start').value = '';
+    document.getElementById('date-end').value = '';
+    
+    loadTransactions();
+}
+
+/**
+ * Format date for display
+ */
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+/**
+ * Format currency for display
+ */
+function formatCurrency(amount) {
+    if (amount === null || amount === undefined) return '$0.00';
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+    }).format(amount);
+}
+
+/**
+ * Get default date range (last 12 months)
+ */
+function getDefaultDateRange() {
+    const today = new Date();
+    const startDate = new Date(today);
+    
+    // Go back 12 months
+    startDate.setMonth(startDate.getMonth() - 12);
+    
+    // Set to first day of that month
+    startDate.setDate(1);
+    
+    return {
+        startDate: startDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
+        endDate: today.toISOString().split('T')[0]
+    };
+}
+
+/**
+ * Update the date range indicator
+ */
+function updateDateRangeIndicator(isDefaultRange, startDate, endDate) {
+    const indicator = document.getElementById('date-range-indicator');
+    const startDateElement = document.getElementById('current-start-date');
+    const endDateElement = document.getElementById('current-end-date');
+    
+    if (isDefaultRange && startDate && endDate) {
+        startDateElement.textContent = formatDateForDisplay(startDate);
+        endDateElement.textContent = formatDateForDisplay(endDate);
+        indicator.style.display = 'flex';
+    } else {
+        indicator.style.display = 'none';
+    }
+}
+
+/**
+ * Format date for display in the indicator
+ */
+function formatDateForDisplay(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+}
+
+/**
+ * Show all transactions (remove date filter)
+ */
+function showAllTransactions() {
+    // Load transactions without any filters (which will load ALL transactions)
+    loadTransactionsWithoutDateFilter();
+}
+
+/**
+ * Load transactions without the default date filter
+ */
+async function loadTransactionsWithoutDateFilter() {
+    try {
+        const queryParams = new URLSearchParams({
+            page: 1,
+            limit: 10000 // Higher limit for all transactions
+        });
+
+        const response = await fetch(`/api/transactions?${queryParams}`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch transactions');
+        }
+
+        const data = await response.json();
+        
+        // Hide date range indicator
+        document.getElementById('date-range-indicator').style.display = 'none';
+        
+        // Load transaction types for filter dropdown
+        populateTypeFilter(data.transactions);
+        
+        // Update summary
+        updateTransactionSummary(data.transactions);
+        
+        // Initialize or update DataTable
+        initializeTransactionsTable(data.transactions);
+        
+    } catch (error) {
+        console.error('Error loading all transactions:', error);
+        // Show error message to user
+        const tableContainer = document.querySelector('.transactions-table-container');
+        tableContainer.innerHTML = `
+            <div class="error-message">
+                <p>Error loading transactions: ${error.message}</p>
+                <button onclick="loadTransactions()" class="btn primary">Retry</button>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Debounce function to limit API calls
+ */
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
 }

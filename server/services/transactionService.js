@@ -69,10 +69,13 @@ class TransactionService {
   }
 
   async getTransactionsByUser(userId, options = {}) {
-    const { skip = 0, take = 100, orderBy = { date: 'desc' } } = options;
+    const { skip = 0, take = 100, orderBy = { date: 'desc' }, where = {} } = options;
+    
+    // Merge the base user filter with any additional where conditions
+    const finalWhere = { ...where, user_id: userId };
     
     return await prisma.transaction.findMany({
-      where: { user_id: userId },
+      where: finalWhere,
       skip,
       take,
       orderBy,

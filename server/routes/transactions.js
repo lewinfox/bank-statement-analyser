@@ -3,6 +3,10 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const csvService = require('../services/csvService');
+const transactionService = require('../services/transactionService');
+const { PrismaClient } = require('@prisma/client');
+
+const prisma = new PrismaClient();
 
 const router = express.Router();
 
@@ -48,6 +52,109 @@ const requireAuth = (req, res, next) => {
   }
   next();
 };
+
+/**
+ * Get user transactions with filtering and sorting
+ * GET /api/transactions
+ */
+router.get('/', requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const {
+      page = 1,
+      limit = 50,
+      sortBy = 'date',
+      sortOrder = 'desc',
+      search = '',
+      type = '',
+      minAmount = '',
+      maxAmount = '',
+      startDate = '',
+      endDate = ''
+    } = req.query;
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
+
+    // Build where clause for filtering
+    const where = { user_id: userId };
+    
+    // Add search filter (searches details, particulars, reference)
+    if (search) {
+      where.OR = [
+        { details: { contains: search, mode: 'insensitive' } },
+        { particulars: { contains: search, mode: 'insensitive' } },
+        { reference: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
+    // Add type filter
+    if (type) {
+      where.type = { contains: type, mode: 'insensitive' };
+    }
+
+    // Add amount range filter
+    if (minAmount || maxAmount) {
+      where.amount = {};
+      if (minAmount) where.amount.gte = parseFloat(minAmount);
+      if (maxAmount) where.amount.lte = parseFloat(maxAmount);
+    }
+
+    // Add date range filter
+    if (startDate || endDate) {
+      where.date = {};
+      if (startDate) where.date.gte = new Date(startDate);
+      if (endDate) where.date.lte = new Date(endDate);
+    }
+
+    // Build orderBy clause
+    const orderBy = {};
+    orderBy[sortBy] = sortOrder === 'asc' ? 'asc' : 'desc';
+
+    // Get transactions and total count
+    const [rawTransactions, totalCount] = await Promise.all([
+      transactionService.getTransactionsByUser(userId, {
+        skip,
+        take,
+        orderBy,
+        where
+      }),
+      // Get total count for pagination
+      prisma.transaction.count({ where })
+    ]);
+
+    // Convert Prisma Decimal amounts to numbers for JSON serialization
+    const transactions = rawTransactions.map(transaction => ({
+      ...transaction,
+      amount: parseFloat(transaction.amount.toString())
+    }));
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(totalCount / take);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    res.json({
+      transactions,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalCount,
+        hasNextPage,
+        hasPrevPage,
+        limit: take
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch transactions',
+      details: error.message 
+    });
+  }
+});
 
 /**
  * Upload and process CSV transactions file
