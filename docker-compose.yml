@@ -1,0 +1,61 @@
+services:
+  # Development environment
+  app-dev:
+    build:
+      context: .
+      target: development
+    ports:
+      - "3000:3000" # The app
+      - "5555:5555" # Prisma studio
+    volumes:
+      # Mount source code for live reload
+      - .:/app
+      - /app/node_modules
+      # Persist uploads (but not database for dev)
+      - dev-uploads:/app/uploads
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=file:./dev.db
+    user: "${USER_UID:-1000}:${USER_GID:-1000}"
+    restart: unless-stopped
+
+  # Production environment
+  app-prod:
+    build:
+      context: .
+      target: production
+    ports:
+      - "3000:3000"
+    volumes:
+      # Persist database
+      - prod-db:/app/prisma
+      # Persist uploads
+      - prod-uploads:/app/uploads
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:./prod.db
+    profiles:
+      - prod
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  dev-db:
+    driver: local
+  dev-uploads:
+    driver: local
+  prod-db:
+    driver: local
+  prod-uploads:
+    driver: local

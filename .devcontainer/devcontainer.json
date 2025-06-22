@@ -1,0 +1,52 @@
+{
+  "name": "Personal Finance Dashboard",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "app-dev",
+  "workspaceFolder": "/app",
+  "shutdownAction": "stopCompose",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.vscode-json",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode",
+        "ms-vscode.vscode-typescript-next",
+        "Prisma.prisma",
+        "ms-vscode.vscode-eslint",
+        "christian-kohler.path-intellisense",
+        "ms-vscode.vscode-jest"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "files.associations": {
+          "*.prisma": "prisma"
+        }
+      }
+    }
+  },
+  "forwardPorts": [3000, 5555],
+  "portsAttributes": {
+    "3000": {
+      "label": "Application",
+      "onAutoForward": "notify"
+    },
+    "5555": {
+      "label": "Prisma Studio",
+      "onAutoForward": "notify"
+    }
+  },
+  "postCreateCommand": "npx prisma generate && npx prisma migrate deploy",
+  "containerEnv": {
+    "USER_UID": "${localEnv:USER_UID}",
+    "USER_GID": "${localEnv:USER_GID}"
+  },
+  "postStartCommand": "npx prisma studio --browser none",
+  "remoteUser": "node",
+  "mounts": [
+    "source=${localWorkspaceFolder}/.vscode,target=/app/.vscode,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.gitconfig,target=/home/node/.gitconfig,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.config/claude,target=/home/node/.config/claude,type=bind,consistency=cached"
+  ]
+}

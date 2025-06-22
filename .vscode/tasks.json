@@ -1,0 +1,31 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Start Prisma Studio",
+            "type": "shell",
+            "command": "npx",
+            "args": [
+                "prisma",
+                "studio",
+                "--hostname",
+                "0.0.0.0",
+                "--port",
+                "5555",
+                "--browser",
+                "none"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": [],
+            "runOptions": {
+                "runOn": "default"
+            }
+        }
+    ]
+}
