@@ -40,7 +40,12 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    console.log('Login successful for user:', user);
+    console.log('Setting session userId to:', user.id);
     req.session.userId = user.id;
+    console.log('Session after setting userId:', req.session);
+    console.log('Session ID:', req.sessionID);
+    
     res.json({ message: 'Login successful', user });
   } catch (error) {
     console.error('Login error:', error);
@@ -60,16 +65,25 @@ router.post('/logout', (req, res) => {
 
 router.get('/me', async (req, res) => {
   try {
+    console.log('Auth /me endpoint called');
+    console.log('Session ID:', req.sessionID);
+    console.log('Session data:', req.session);
+    console.log('User ID from session:', req.session.userId);
+    
     if (!req.session.userId) {
+      console.log('No userId in session, returning 401');
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
     const user = await userService.findUserById(req.session.userId);
+    console.log('User found:', user);
     
     if (!user) {
+      console.log('User not found in database, returning 401');
       return res.status(401).json({ error: 'User not found' });
     }
 
+    console.log('Returning user data');
     res.json({ user });
   } catch (error) {
     console.error('Get user error:', error);

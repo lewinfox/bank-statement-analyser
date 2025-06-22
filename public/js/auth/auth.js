@@ -94,8 +94,13 @@ class Auth {
             registerForm.addEventListener('submit', (e) => this.handleRegister(e));
         }
 
-        // Check if already logged in
-        this.checkAuthStatus();
+        // Check if already logged in (only if we're not coming from a login)
+        if (!this.isReturningFromLogin()) {
+            // Wait for API to be available before checking auth status
+            this.waitForAPI().then(() => {
+                this.checkAuthStatus();
+            });
+        }
     }
 
     showLoginForm() {
@@ -143,12 +148,18 @@ class Auth {
         }
 
         try {
-            await window.API.auth.login(username, password);
+            const loginResult = await window.API.auth.login(username, password);
+            console.log('Auth: Login successful, result:', loginResult);
             Utils.showMessage('auth-message', 'Login successful!', 'success');
             
+            // Set flag to indicate we just logged in
+            sessionStorage.setItem('justLoggedIn', 'true');
+            
+            // Give more time for session to be established on server
             setTimeout(() => {
+                console.log('Auth: Redirecting to dashboard');
                 window.location.href = 'dashboard.html';
-            }, 1000);
+            }, 2000);
         } catch (error) {
             console.error('Auth: Login failed:', error.message || error);
             
@@ -201,13 +212,36 @@ class Auth {
     }
 
     async checkAuthStatus() {
+        // Validate API availability
+        if (!window.API || !window.API.auth || !window.API.auth.me) {
+            console.log('Auth: API not available during auth status check');
+            return;
+        }
+
         try {
-            await API.auth.me();
+            console.log('Auth: Checking if user is already authenticated');
+            console.log('Auth: Current cookies:', document.cookie);
+            const result = await window.API.auth.me();
+            console.log('Auth: User is already authenticated:', result);
             // If successful, user is authenticated, redirect to dashboard
             window.location.href = 'dashboard.html';
         } catch (error) {
+            console.log('Auth: User not authenticated, staying on login page');
+            console.log('Auth: Authentication error details:', error);
+            console.log('Auth: Error status:', error.status);
+            console.log('Auth: Error message:', error.message);
             // User is not authenticated, stay on login page
         }
+    }
+
+    isReturningFromLogin() {
+        // Check if we have a flag indicating we just performed a login
+        const justLoggedIn = sessionStorage.getItem('justLoggedIn');
+        if (justLoggedIn) {
+            sessionStorage.removeItem('justLoggedIn');
+            return true;
+        }
+        return false;
     }
 
     clearForms() {

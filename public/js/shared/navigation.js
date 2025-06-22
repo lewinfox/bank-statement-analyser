@@ -38,10 +38,10 @@ class Navigation {
     async loadHeaderAndNav() {
         try {
             // Load header component
-            await ComponentLoader.loadComponent('header', 'header-container');
+            await window.ComponentLoader.loadComponent('header', 'header-container');
             
             // Load navbar into header
-            await ComponentLoader.loadComponent('navbar', 'navbar-container');
+            await window.ComponentLoader.loadComponent('navbar', 'navbar-container');
             
             // Set active nav item
             this.setActiveNavItem();
@@ -78,23 +78,73 @@ class Navigation {
      * @returns {Promise<boolean>}
      */
     async checkAuth() {
-        try {
-            await API.auth.me();
-            return true;
-        } catch (error) {
+        // Validate API availability
+        if (!window.API || !window.API.auth || !window.API.auth.me) {
+            console.log('Navigation: API not available during auth check');
             return false;
         }
+
+        try {
+            console.log('Navigation: Checking authentication status');
+            const result = await window.API.auth.me();
+            console.log('Navigation: Authentication check successful:', result);
+            return true;
+        } catch (error) {
+            console.log('Navigation: Authentication check failed:', error.message || error);
+            return false;
+        }
+    }
+
+    /**
+     * Wait for the API object to be available
+     * @returns {Promise} Promise that resolves when API is ready
+     */
+    async waitForAPI() {
+        return new Promise((resolve) => {
+            if (window.API && window.API.auth) {
+                resolve();
+                return;
+            }
+            
+            let attempts = 0;
+            const checkAPI = () => {
+                attempts++;
+                
+                if (window.API && window.API.auth) {
+                    resolve();
+                } else {
+                    if (attempts > 1000) { // Stop after 10 seconds
+                        console.error('Navigation: Timeout waiting for API');
+                        resolve(); // Resolve anyway to prevent hanging
+                    } else {
+                        setTimeout(checkAPI, 10);
+                    }
+                }
+            };
+            
+            checkAPI();
+        });
     }
 
     /**
      * Redirect to login if not authenticated
      */
     async requireAuth() {
+        console.log('Navigation: requireAuth called');
+        
+        // Wait for API to be available first
+        await this.waitForAPI();
+        
         const isAuthenticated = await this.checkAuth();
+        console.log('Navigation: isAuthenticated =', isAuthenticated);
+        
         if (!isAuthenticated) {
+            console.log('Navigation: User not authenticated, redirecting to login');
             window.location.href = 'index.html';
             return false;
         }
+        
+        console.log('Navigation: User authenticated, continuing');
         return true;
     }
 }

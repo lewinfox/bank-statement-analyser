@@ -7,8 +7,11 @@ class DashboardPage {
     }
 
     async init() {
+        // Small delay to ensure session is established
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         // Check authentication
-        const isAuthenticated = await Navigation.requireAuth();
+        const isAuthenticated = await window.Navigation.requireAuth();
         if (!isAuthenticated) return;
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -18,7 +21,7 @@ class DashboardPage {
 
     async setupPage() {
         // Load header and navigation
-        await Navigation.loadHeaderAndNav();
+        await window.Navigation.loadHeaderAndNav();
         
         // Set up event listeners
         this.setupEventListeners();
