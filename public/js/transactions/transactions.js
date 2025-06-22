@@ -1,7 +1,10 @@
+import { navigation } from "../shared/navigation.js";
+import { api } from "../shared/api.js";
+
 /**
  * Transactions page module
  */
-class TransactionsPage {
+export class TransactionsPage {
   constructor() {
     this.transactionsTable = null;
     this.currentFilters = {};
@@ -10,7 +13,7 @@ class TransactionsPage {
 
   async init() {
     // Check authentication
-    const isAuthenticated = await window.Navigation.requireAuth();
+    const isAuthenticated = await navigation.requireAuth();
     if (!isAuthenticated) return;
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -72,7 +75,7 @@ class TransactionsPage {
 
       this.currentFilters = filters;
 
-      const data = await API.transactions.getAll(filters);
+      const data = await api.transactions.getAll(filters);
 
       // Show date range indicator if using default range
       this.updateDateRangeIndicator(
@@ -217,7 +220,7 @@ class TransactionsPage {
 
   async loadTransactionsWithoutDateFilter() {
     try {
-      const data = await API.transactions.getAll({ limit: 10000 });
+      const data = await api.transactions.getAll({ limit: 10000 });
 
       // Hide date range indicator
       const indicator = document.getElementById("date-range-indicator");
@@ -269,6 +272,3 @@ class TransactionsPage {
     }
   }
 }
-
-// Initialize when script loads
-window.TransactionsPage = new TransactionsPage();

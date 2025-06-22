@@ -1,7 +1,10 @@
+import { api } from "../shared/api.js";
+import { Utils } from "../shared/utils.js";
+
 /**
  * Authentication module
  */
-class Auth {
+export class Auth {
   constructor() {
     this.setupEventListeners();
   }
@@ -9,41 +12,7 @@ class Auth {
   setupEventListeners() {
     document.addEventListener("DOMContentLoaded", () => {
       // Ensure API is loaded before initializing
-      this.waitForAPI().then(() => {
-        this.initializeAuthPage();
-      });
-    });
-  }
-
-  /**
-   * Wait for the API object to be available
-   * @returns {Promise} Promise that resolves when API is ready
-   */
-  async waitForAPI() {
-    return new Promise((resolve) => {
-      if (window.API && window.API.auth) {
-        resolve();
-        return;
-      }
-
-      let attempts = 0;
-      const checkAPI = () => {
-        attempts++;
-
-        if (window.API && window.API.auth) {
-          resolve();
-        } else {
-          if (attempts > 1000) {
-            // Stop after 10 seconds
-            console.error("Auth: Timeout waiting for API");
-            resolve(); // Resolve anyway to prevent hanging
-          } else {
-            setTimeout(checkAPI, 10);
-          }
-        }
-      };
-
-      checkAPI();
+      this.initializeAuthPage();
     });
   }
 
@@ -97,10 +66,7 @@ class Auth {
 
     // Check if already logged in (only if we're not coming from a login)
     if (!this.isReturningFromLogin()) {
-      // Wait for API to be available before checking auth status
-      this.waitForAPI().then(() => {
-        this.checkAuthStatus();
-      });
+      this.checkAuthStatus();
     }
   }
 
@@ -142,7 +108,7 @@ class Auth {
     }
 
     // Validate API availability
-    if (!window.API || !window.API.auth || !window.API.auth.login) {
+    if (!api || !api.auth || !api.auth.login) {
       console.error("Auth: API not available during login");
       Utils.showMessage(
         "auth-message",
@@ -153,7 +119,7 @@ class Auth {
     }
 
     try {
-      const loginResult = await window.API.auth.login(username, password);
+      const loginResult = await api.auth.login(username, password);
       console.log("Auth: Login successful, result:", loginResult);
       Utils.showMessage("auth-message", "Login successful!", "success");
 
@@ -209,7 +175,7 @@ class Auth {
     }
 
     try {
-      await API.auth.register(username, password);
+      await api.auth.register(username, password);
       Utils.showMessage(
         "auth-message",
         "Registration successful! You can now log in.",
@@ -231,16 +197,10 @@ class Auth {
   }
 
   async checkAuthStatus() {
-    // Validate API availability
-    if (!window.API || !window.API.auth || !window.API.auth.me) {
-      console.log("Auth: API not available during auth status check");
-      return;
-    }
-
     try {
       console.log("Auth: Checking if user is already authenticated");
       console.log("Auth: Current cookies:", document.cookie);
-      const result = await window.API.auth.me();
+      const result = await api.auth.me();
       console.log("Auth: User is already authenticated:", result);
       // If successful, user is authenticated, redirect to dashboard
       window.location.href = "dashboard.html";
@@ -272,6 +232,3 @@ class Auth {
     Utils.clearMessage("auth-message");
   }
 }
-
-// Initialize when script loads
-window.Auth = new Auth();

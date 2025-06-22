@@ -1,14 +1,17 @@
+import { navigation } from "../shared/navigation.js";
+import { api } from "../shared/api.js";
+
 /**
  * CSV Upload page module
  */
-class UploadPage {
+export class UploadPage {
   constructor() {
     this.init();
   }
 
   async init() {
     // Check authentication
-    const isAuthenticated = await window.Navigation.requireAuth();
+    const isAuthenticated = await navigation.requireAuth();
     if (!isAuthenticated) return;
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -100,7 +103,7 @@ class UploadPage {
     Utils.clearMessage("upload-message");
 
     try {
-      const data = await API.transactions.uploadCsv(file);
+      const data = await api.transactions.uploadCsv(file);
       Utils.showMessage(
         "upload-message",
         `Successfully processed ${data.filename}`,
@@ -207,6 +210,3 @@ class UploadPage {
     }
   }
 }
-
-// Initialize when script loads
-window.UploadPage = new UploadPage();
