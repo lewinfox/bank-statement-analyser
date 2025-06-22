@@ -1,0 +1,224 @@
+/**
+ * Authentication module
+ */
+class Auth {
+    constructor() {
+        this.setupEventListeners();
+    }
+
+    setupEventListeners() {
+        document.addEventListener('DOMContentLoaded', () => {
+            // Ensure API is loaded before initializing
+            this.waitForAPI().then(() => {
+                this.initializeAuthPage();
+            });
+        });
+    }
+
+    /**
+     * Wait for the API object to be available
+     * @returns {Promise} Promise that resolves when API is ready
+     */
+    async waitForAPI() {
+        return new Promise((resolve) => {
+            if (window.API && window.API.auth) {
+                resolve();
+                return;
+            }
+            
+            let attempts = 0;
+            const checkAPI = () => {
+                attempts++;
+                
+                if (window.API && window.API.auth) {
+                    resolve();
+                } else {
+                    if (attempts > 1000) { // Stop after 10 seconds
+                        console.error('Auth: Timeout waiting for API');
+                        resolve(); // Resolve anyway to prevent hanging
+                    } else {
+                        setTimeout(checkAPI, 10);
+                    }
+                }
+            };
+            
+            checkAPI();
+        });
+    }
+
+    initializeAuthPage() {
+        // Set up form toggle buttons
+        const showLoginBtn = document.getElementById('show-login');
+        const showRegisterBtn = document.getElementById('show-register');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+
+        if (showLoginBtn && showRegisterBtn) {
+            showLoginBtn.addEventListener('click', () => {
+                this.showLoginForm();
+            });
+
+            showRegisterBtn.addEventListener('click', () => {
+                this.showRegisterForm();
+            });
+        }
+
+        // Set up form submissions
+        if (loginForm) {
+            loginForm.addEventListener('submit', (e) => this.handleLogin(e));
+            
+            // Also add Enter key handling for login form inputs
+            const loginUsername = document.getElementById('login-username');
+            const loginPassword = document.getElementById('login-password');
+            
+            if (loginUsername) {
+                loginUsername.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.handleLogin(e);
+                    }
+                });
+            }
+            
+            if (loginPassword) {
+                loginPassword.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.handleLogin(e);
+                    }
+                });
+            }
+        }
+
+        if (registerForm) {
+            registerForm.addEventListener('submit', (e) => this.handleRegister(e));
+        }
+
+        // Check if already logged in
+        this.checkAuthStatus();
+    }
+
+    showLoginForm() {
+        const showLoginBtn = document.getElementById('show-login');
+        const showRegisterBtn = document.getElementById('show-register');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+
+        showLoginBtn.classList.add('active');
+        showRegisterBtn.classList.remove('active');
+        loginForm.classList.add('active');
+        registerForm.classList.remove('active');
+        Utils.clearMessage('auth-message');
+    }
+
+    showRegisterForm() {
+        const showLoginBtn = document.getElementById('show-login');
+        const showRegisterBtn = document.getElementById('show-register');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+
+        showRegisterBtn.classList.add('active');
+        showLoginBtn.classList.remove('active');
+        registerForm.classList.add('active');
+        loginForm.classList.remove('active');
+        Utils.clearMessage('auth-message');
+    }
+
+    async handleLogin(event) {
+        event.preventDefault();
+        
+        const username = document.getElementById('login-username').value;
+        const password = document.getElementById('login-password').value;
+
+        if (!username || !password) {
+            Utils.showMessage('auth-message', 'Please fill in all fields', 'error');
+            return;
+        }
+
+        // Validate API availability
+        if (!window.API || !window.API.auth || !window.API.auth.login) {
+            console.error('Auth: API not available during login');
+            Utils.showMessage('auth-message', 'Application not ready. Please refresh the page.', 'error');
+            return;
+        }
+
+        try {
+            await window.API.auth.login(username, password);
+            Utils.showMessage('auth-message', 'Login successful!', 'success');
+            
+            setTimeout(() => {
+                window.location.href = 'dashboard.html';
+            }, 1000);
+        } catch (error) {
+            console.error('Auth: Login failed:', error.message || error);
+            
+            let errorMessage = 'Login failed';
+            if (error.message) {
+                errorMessage = error.message;
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            }
+            
+            Utils.showMessage('auth-message', errorMessage, 'error');
+        }
+    }
+
+    async handleRegister(event) {
+        event.preventDefault();
+        
+        const username = document.getElementById('register-username').value;
+        const password = document.getElementById('register-password').value;
+        const passwordConfirm = document.getElementById('register-password-confirm').value;
+
+        // Client-side validation
+        if (!username || !password || !passwordConfirm) {
+            Utils.showMessage('auth-message', 'Please fill in all fields', 'error');
+            return;
+        }
+
+        if (password !== passwordConfirm) {
+            Utils.showMessage('auth-message', 'Passwords do not match', 'error');
+            return;
+        }
+
+        if (password.length < 6) {
+            Utils.showMessage('auth-message', 'Password must be at least 6 characters long', 'error');
+            return;
+        }
+
+        try {
+            await API.auth.register(username, password);
+            Utils.showMessage('auth-message', 'Registration successful! You can now log in.', 'success');
+            
+            // Switch to login form after successful registration
+            setTimeout(() => {
+                this.showLoginForm();
+                this.clearForms();
+            }, 2000);
+        } catch (error) {
+            Utils.showMessage('auth-message', error.message || 'Registration failed', 'error');
+        }
+    }
+
+    async checkAuthStatus() {
+        try {
+            await API.auth.me();
+            // If successful, user is authenticated, redirect to dashboard
+            window.location.href = 'dashboard.html';
+        } catch (error) {
+            // User is not authenticated, stay on login page
+        }
+    }
+
+    clearForms() {
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        
+        if (loginForm) loginForm.reset();
+        if (registerForm) registerForm.reset();
+        Utils.clearMessage('auth-message');
+    }
+}
+
+// Initialize when script loads
+window.Auth = new Auth();
